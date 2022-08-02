@@ -92,7 +92,7 @@ if __name__ == '__main__':
     predictions = model.predict(new_test_data.map(lambda x: x.features))
 
     # Convert result Model from RDD Type to DataFrame Type and named predictionsDF
-    predictionsDF = predictions.map(lambda x: (x,)).toDF()
+    predictionsDF = predictions.map(lambda x: (x, )).toDF(["predictions"])
 
     # Get random 10 rows and count predictionsDF
     print('take predictions DataFrame : ', predictionsDF.take(10))
@@ -102,20 +102,17 @@ if __name__ == '__main__':
     labels = new_test_data.map(lambda lp: lp.label)
 
     # Convert result from RDD Type to DataFrame Type and named labelsDF
-    labelsDF = labels.map(lambda x: (x, )).toDF()
+    labelsDF = labels.map(lambda x: (x, )).toDF(["labels"])
+    # labelsDF = labels.toDF(["labels"])
 
     # Get random 10 rows and count labelsDF
     print('take labels DataFrame : ', labelsDF.take(10))
     print("count labels DataFrame : ", labelsDF.count())
 
+    labelsAndPredictions = zip(predictionsDF, labelsDF)
 
-    labelsAndPredictions = zip(labelsDF, predictionsDF)
-    #
-    print('take labelsAndPredictions', labelsAndPredictions.show(5))
-    #
-    # print("count labelsAndPredictions : ", labelsAndPredictions.count())
+    print("count labelsAndPredictions : ", len(list(labelsAndPredictions)))
 
-    
     test_data_count = float(new_test_data.count())
 
     print('\n\n=========================== Start labels And Predictions Filtered ==================================\n\n')

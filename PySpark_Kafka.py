@@ -93,39 +93,44 @@ if __name__ == '__main__':
 
     # Convert result Model from RDD Type to DataFrame Type and named predictionsDF
     predictionsDF = predictions.map(lambda x: (x, )).toDF(["predictions"])
+    predictionsDF = list(predictionsDF.select('predictions').toPandas()['predictions'])
 
     # Get random 10 rows and count predictionsDF
-    print('take predictions DataFrame : ', predictionsDF.take(10))
-    print("count predictions DataFrame : ", predictionsDF.count())
+    # print('list predictions DataFrame : ', predictionsDF)
+    # print("count predictions DataFrame : ", len(predictionsDF))
 
     # Split regional result from test data and named labels
     labels = new_test_data.map(lambda lp: lp.label)
 
     # Convert result from RDD Type to DataFrame Type and named labelsDF
     labelsDF = labels.map(lambda x: (x, )).toDF(["labels"])
-    # labelsDF = labels.toDF(["labels"])
+    labelsDF = list(labelsDF.select('labels').toPandas()['labels'])
 
     # Get random 10 rows and count labelsDF
-    print('take labels DataFrame : ', labelsDF.take(10))
-    print("count labels DataFrame : ", labelsDF.count())
+    # print("list labels DataFrame : ", labelsDF)
+    # print("count labels DataFrame : ", len(labelsDF))
 
-    labelsAndPredictions = zip(predictionsDF, labelsDF)
+    labelsAndPredictions = zip(labelsDF, predictionsDF)
 
-    print("count labelsAndPredictions : ", len(list(labelsAndPredictions)))
+    # print("list labelsAndPredictions : ", list(labelsAndPredictions))
+    print("type labelsAndPredictions : ", type(labelsAndPredictions))
+    # print("count labelsAndPredictions : ", len(list(labelsAndPredictions)))
+
+    # for l, n in labelsAndPredictions:
+    #     print('labelsDF: ', l)
+    #     print('predictionsDF: ', n)
+
+    filterLabelsAndPredictions = filter(lambda x: x[0] != x[1], list(labelsAndPredictions))
+
+    filterLabelsAndPredictionsCount = len(list(filterLabelsAndPredictions))
+
+    print("count filterlabelsAndPredictions : ", filterLabelsAndPredictionsCount)
 
     test_data_count = float(new_test_data.count())
 
-    print('\n\n=========================== Start labels And Predictions Filtered ==================================\n\n')
+    testErr = filterLabelsAndPredictionsCount / test_data_count * 100
 
-    print("count predictions : ", predictions.count())
-    #
-    # print('\n\n============================ End labels And Predictions Filtered ===================================\n\n')
-    #
-    # labelsAndPredictionsFiltered = labelsAndPredictions.filter(lambda lp: lp[0] != lp[1])
-    #
-    # # testErr = labelsAndPredictionsFiltered.count() / test_data_count
-    #
-    # print('Test Accuracy = ', testErr)
+    print('Test Accuracy = ', testErr)
 
     print('\n\n============================ End Evaluate model ===================================\n\n')
 

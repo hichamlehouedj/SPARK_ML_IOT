@@ -133,5 +133,3 @@ if __name__ == '__main__':
     print('Test Accuracy = ', testErr)
 
     print('\n\n============================ End Evaluate model ===================================\n\n')
-
-

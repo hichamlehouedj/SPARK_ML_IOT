@@ -21,12 +21,9 @@ def initSparkContext():
     return spark
 
 
-def loadDataset(spark, dataSetName):
-    # load Dataset in data Frame type
-    dataFrame = spark.read.csv(dataSetName, header=True)
-
+def loadDataset(dataSet):
     # convert data frame to Pandas
-    dataFrame.toPandas()
+    dataSet.toPandas()
 
     # How many rows we have
     # dataFrame.count()
@@ -38,7 +35,8 @@ def loadDataset(spark, dataSetName):
     # dataFrame.describe().toPandas()
 
     # convert columns type
-    dataSet = dataFrame.select(
+
+    dataSet = dataSet.select(
         col('PatientID').cast('int'),
         col('Pregnancies').cast('int'),
         col('PlasmaGlucose').cast('int'),
@@ -97,8 +95,15 @@ def trainingModel(trainingData):
 
 
 def predictionsModel(model, data):
-    return model.predict(data.map(lambda x: x.features))
+    startTime = time()
 
+    predictResult = model.predict(data.map(lambda x: x.features))
+
+    endTime = time()
+
+    print("\nTime to predict model: %.3f seconds\n" % (endTime - startTime))
+
+    return predictResult
 
 def calculationAccuracy(predictionsResult, testDataLabels):
     # Convert result Model from RDD Type to DataFrame Type and named predictionsDF
@@ -137,7 +142,11 @@ if __name__ == '__main__':
     sc = spark.sparkContext
     sc.setLogLevel("WARN")
 
-    Dataset = loadDataset(spark, "diabetes.csv")
+
+    # load Dataset in data Frame type
+    dataFrame = spark.read.csv("diabetes.csv", header=True)
+
+    Dataset = loadDataset(dataFrame)
 
     # convert data set from `Data Frame` type to `RDD` type
     rddObj = Dataset.rdd
@@ -213,14 +222,31 @@ if __name__ == '__main__':
          value_deserializer=lambda m: json.loads(m.decode('utf8'))
     )
 
-    for msg in consumer:
-        print("type msg : ", type(msg))
-        print("type value : ", type(msg.value))
-        print("value : ", msg.value)
-        dataFrame = json_normalize(msg.value)
-        print("type df : ",  type(dataFrame))
-        print("value df : ",  dataFrame)
+    json_list = []
 
+    for msg in consumer:
+        json_list.append(msg.value)
+        jsonToDataFrame = spark.read.json(sc.parallelize(json_list))
+
+        rowNewRDD = loadDataset(jsonToDataFrame).rdd
+
+        # print("count row New RDD 1 : ",  rowNewRDD.count())
+        # print("value row New RDD 1 : ",  rowNewRDD.collect())
+
+        rowNewRDD = rowNewRDD.map(lambda row: LabeledPoint(row["Diabetic"], Vectors.dense(row['features'])))
+
+        # print("count row New RDD 2 : ",  rowNewRDD.count())
+        # print("value row New RDD 2 : ",  rowNewRDD.collect())
+
+        # Evaluate model on test instances and compute test error
+        predictionsNewRow = predictionsModel(model, rowNewRDD)
+
+        result = predictionsNewRow.collect()[0]
+
+        if(result == 0):
+            print("The patient is  : Injured")
+        else:
+            print("The patient is  : Healthy")
 
     # ---------------------------------------------------------------------------------
 """
@@ -245,4 +271,4 @@ ssc.awaitTermination()
 #  /opt/spark/bin/spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0 PySpark_Kafka.py
 
 
-# {"PatientID": 158000, "Pregnancies": 0, "PlasmaGlucose": 171, "DiastolicBloodPressure": 80, "TricepsThickness": 34, "SerumInsulin": 23, "BMI": 43.50972593, "DiabetesPedigree": 1.213191354, "Age": 21 }
+# {"PatientID": 158000, "Pregnancies": 0, "PlasmaGlucose": 171, "DiastolicBloodPressure": 80, "TricepsThickness": 34, "SerumInsulin": 23, "BMI": 43.50972593, "DiabetesPedigree": 1.213191354, "Age": 21, "Diabetic": 2 }
